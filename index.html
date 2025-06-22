@@ -1,0 +1,799 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>Turniej Par</title>
+  <link rel="icon" type="image/png" href="./img/favicon.png" />
+  <style>
+    body { font-family: sans-serif; padding: 2em; }
+    header {
+      margin-bottom: 20px;
+    }
+
+    .stepper { display: flex; gap: 1em; margin-bottom: 2em; }
+    .step { padding: 0.5em 1em; border-radius: 5px; border: 1px solid #ccc; }
+    .step.active { background: #333; color: #fff; }
+    .hidden { display: none; }
+    .buckets { display: flex; gap: 2em; }
+    .bucket { width: 50%; }
+    ul { padding-left: 1em; }
+    li { margin-bottom: 0.3em; }
+    input[type="text"] { width: 100%; margin-bottom: 0.3em; }
+    button {
+      margin-top: 0.5em;
+      background: #333;
+      color: white;
+      border: 1px solid #ccc;
+      border-radius: 5px;
+      padding: 0.4em 1em;
+      cursor: pointer;
+      font-size: 1em;
+      transition: background 0.2s;
+    }
+
+    button:hover {
+      background: #555;
+    }
+
+    button.delete {
+      background: transparent;
+      border: none;
+      color: #888;
+      font-size: 1em;
+      cursor: pointer;
+      margin-left: 0.5em;
+      transition: color 0.2s;
+    }
+
+    button.delete:hover {
+      color: red;
+    }
+
+    textarea {
+      width: 100%;
+      height: 10em;
+      padding: 0.5em;
+      font-size: 1em;
+      border: 1px solid #ccc;
+      border-radius: 5px;
+      resize: vertical;
+      box-sizing: border-box;
+    }
+
+    .round-info {
+      margin-bottom: 1.5em;
+    }
+
+    .matches .match,
+    .pausers .pause,
+    .dyp .dyp-info {
+      background: #f4f4f4;
+      padding: 0.6em 1em;
+      margin: 0.4em 0;
+      border: 1px solid #ccc;
+      border-radius: 5px;
+    }
+
+    .round-controls button {
+      margin-right: 1em;
+    }
+
+    .win {
+      background-color: #d4edda;
+      color: #155724;
+      border-radius: 6px;
+      padding: 0.25rem 0.5rem;
+    }
+
+    .lose {
+      background-color: #f8d7da;
+      color: #721c24;
+      border-radius: 6px;
+      padding: 0.25rem 0.5rem;
+    }
+
+    .draw {
+      background-color: #fff3cd;
+      color: #856404;
+      border-radius: 6px;
+      padding: 0.25rem 0.5rem;
+    }
+
+    .player-list {
+      list-style: none;
+      padding: 0;
+      margin: 20px 0;
+    }
+
+    .player-item {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      background: #f9f9f9;
+      margin-bottom: 4px;
+      padding: 6px 10px;
+      border-radius: 6px;
+      font-family: sans-serif;
+      font-size: 0.95em;
+      border: 1px solid #ddd;
+    }
+
+    .player-item button {
+      background: transparent;
+      border: none;
+      cursor: pointer;
+      font-size: 1em;
+      opacity: 0.6;
+    }
+
+    #tournament-view {
+      display: flex;
+      align-items: flex-start;
+      gap: 2rem;
+      padding: 1rem 0;
+      height: 100%;
+      box-sizing: border-box;
+    }
+
+    #ranking {
+      background-color: #fdfdfd;
+      min-width: 300px;
+    }
+
+    #ranking h2 {
+      margin-bottom: 0.5rem;
+      font-size: 1.2rem;
+    }
+
+    #ranking-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.95rem;
+    }
+
+    #ranking-table th,
+    #ranking-table td {
+      padding: 0.4rem 0.6rem;
+      border-bottom: 1px solid #e0e0e0;
+      text-align: left;
+    }
+
+    #ranking-table th {
+      background-color: #f0f0f0;
+      font-weight: 600;
+    }
+
+    .rounds-box {
+      flex-grow: 1;
+    }
+
+    .round-container {
+      width: 600px;
+      flex-grow: 1;
+      min-width: 0; /* zapobiega overflow */
+      margin-bottom: 2em;
+      border: 1px solid #ddd;
+      border-radius: 8px;
+      padding: 1em;
+      background-color: #fafafa;
+    }
+
+    .round-container h3 {
+      margin-top: 0;
+      font-size: 1.1em;
+      color: #333;
+      border-bottom: 1px solid #ccc;
+      padding-bottom: 0.3em;
+      margin-bottom: 0.8em;
+    }
+
+    .match-row {
+      display: flex;
+      flex-direction: row;
+      justify-content: space-between;
+      align-items: center;
+      gap: 1rem;
+      margin-bottom: 0.5rem;
+    }
+
+    .match-row span {
+      flex: 1;
+      text-align: center;
+      padding: 0.5rem;
+      border-radius: 6px;
+      cursor: pointer;
+    }
+
+    .pause-info {
+      font-style: italic;
+      color: #555;
+      margin-top: 0.5rem;
+      font-size: 0.9rem;
+      text-align: center;
+    }
+
+    .match-row span.vs {
+      flex: 0.5; /* lub mniejsze — zależnie od efektu */
+      font-weight: bold;
+    }
+
+    .match-row span:hover {
+      background-color: #eaeaea;
+    }
+  </style>
+  <script type="module">
+    import { generateTournamentRounds } from "./js/generate_tournament_rounds.js"
+    import { Application, Controller } from "./js/stimulus.js"
+
+    window.Stimulus = Application.start()
+
+    Stimulus.register("tournament", class extends Controller {
+      static targets = ["step1", "step2", "stepIndicator1", "stepIndicator2", "bucketAList", "bucketBList", "bucketAInput", "bucketBInput", "statusLabel", "startButton", "breakButton", "nextStepButton", "rounds", "results", "ranking"]
+      static values = { currentStep: Number, status: String }
+
+      connect() {
+        const savedStep = localStorage.getItem("currentStep");
+        if (savedStep && savedStep !== "0") {
+          this.currentStepValue = Number(savedStep);
+        } else {
+          this.currentStepValue = 1; // domyślny krok
+        }
+
+        const status = this.getTournamentState().status;
+        this.statusValue = status;
+
+        this.loadPlayers()
+
+        const roundsData = localStorage.getItem("tournamentRounds");
+        if (roundsData) {
+          const rounds = JSON.parse(roundsData);
+          const players = this.getAllPlayers();
+          const playerMap = new Map(players.map(p => [p.id, p]));
+
+          this.renderRounds(rounds, playerMap);
+        }
+
+        this.renderRanking()
+      }
+
+      setResult(event) {
+        const roundIndex = parseInt(event.currentTarget.dataset.roundIndex, 10);
+        const matchIndex = parseInt(event.currentTarget.dataset.matchIndex, 10);
+        const result = event.currentTarget.dataset.result;
+
+        const rounds = JSON.parse(localStorage.getItem("tournamentRounds") || "[]");
+
+        rounds[roundIndex].matches[matchIndex].result = result;
+
+        localStorage.setItem("tournamentRounds", JSON.stringify(rounds));
+
+        const allPlayers = this.getAllPlayers();
+        const playerMap = new Map(allPlayers.map(p => [p.id, p]));
+
+        this.renderRounds(rounds, playerMap);
+        this.renderRanking(); // jeśli ranking w Stimulusie
+      }
+
+      updateStatusLabel() {
+        const tournamentState = this.getTournamentState();
+
+        if (tournamentState.status === "running") {
+          this.statusLabelTarget.textContent = "🔁 Turniej trwa"
+        } else {
+          this.statusLabelTarget.textContent = "📝 Tryb edycji"
+        }
+      }
+
+      getTournamentState() {
+        const stateRaw = localStorage.getItem("tournamentState");
+        return stateRaw ? JSON.parse(stateRaw) : { status: "draft" };
+      }
+
+      setTournamentState(status) {
+        this.statusValue = status;
+        localStorage.setItem("tournamentState", JSON.stringify({ status }));
+      }
+
+      disableEditing() {
+        // Zablokuj przyciski dodawania
+        this.element.querySelectorAll(".add-player-btn").forEach(btn => {
+          btn.disabled = true;
+          btn.style.opacity = "0.5";
+          btn.style.cursor = "not-allowed";
+        });
+
+        // Zablokuj przyciski usuwania
+        this.element.querySelectorAll(".delete").forEach(btn => {
+          btn.disabled = true;
+          btn.style.opacity = "0.5";
+          btn.style.cursor = "not-allowed";
+        });
+
+        // Zablokuj pola tekstowe
+        this.element.querySelectorAll("textarea").forEach(area => {
+          area.readOnly = true;
+          area.style.backgroundColor = "#f0f0f0";
+          area.style.color = "#555";
+          area.style.cursor = "not-allowed";
+        });
+
+        const startButton = this.startButtonTarget;
+        startButton.disabled = true;
+        startButton.style.opacity = "0.5";
+        startButton.style.cursor = "not-allowed";
+
+        const breakButton = this.breakButtonTarget;
+        breakButton.disabled = false;
+        breakButton.style.opacity = "1";
+        breakButton.style.cursor = "pointer";
+
+        const nextStepButton = this.nextStepButtonTarget;
+        nextStepButton.disabled = false;
+        nextStepButton.style.opacity = "1";
+        nextStepButton.style.cursor = "pointer";
+      }
+
+      enableEditing() {
+        this.element.querySelectorAll(".add-player-btn").forEach(btn => {
+          btn.disabled = false;
+          btn.style.opacity = "1";
+          btn.style.cursor = "pointer";
+        });
+
+        this.element.querySelectorAll(".delete").forEach(btn => {
+          btn.disabled = false;
+          btn.style.opacity = "1";
+          btn.style.cursor = "pointer";
+        });
+
+        this.element.querySelectorAll("textarea").forEach(area => {
+          area.readOnly = false;
+          area.style.backgroundColor = "#fff";
+          area.style.color = "#000";
+          area.style.cursor = "pointer";
+        });
+
+        const startButton = this.startButtonTarget;
+        startButton.disabled = false;
+        startButton.style.opacity = "1";
+        startButton.style.cursor = "pointer";
+
+        const breakButton = this.breakButtonTarget;
+        breakButton.disabled = true;
+        breakButton.style.opacity = "0.5";
+        breakButton.style.cursor = "not-allowed";
+
+        const nextStepButton = this.nextStepButtonTarget;
+        nextStepButton.disabled = true;
+        nextStepButton.style.opacity = "0.5";
+        nextStepButton.style.cursor = "not-allowed";
+      }
+
+      renderRounds(rounds, playerMap) {
+        self = this;
+
+        const container = this.roundsTarget;
+        container.innerHTML = "";
+
+        rounds.forEach((round, roundIndex) => {
+          const revealBtn = document.createElement("button");
+          revealBtn.textContent = round.revealed ? "Ukryj" : "Odkryj";
+          revealBtn.classList.add("reveal-button");
+
+          revealBtn.addEventListener("click", () => {
+            const pauseCounts = JSON.parse(localStorage.getItem("pauseCounts") || "{}");
+
+            round.revealed = true;
+            round.pausers.forEach(playerId => {
+              const prevCount = pauseCounts[playerId] || 0;
+              pauseCounts[playerId] = prevCount + 1;
+            });
+
+            localStorage.setItem("tournamentRounds", JSON.stringify(rounds));
+            localStorage.setItem("pauseCounts", JSON.stringify(pauseCounts));
+            self.renderRounds(rounds, playerMap); // re-render
+            self.renderRanking();
+          });
+
+          const roundEl = document.createElement("div");
+          roundEl.className = "round-container";
+          roundEl.innerHTML = `<h3>Runda ${round.round}</h3>`;
+          roundEl.style.marginBottom = "20px";
+
+          if (round.revealed) {
+            round.matches.forEach((match, matchIndex) => {
+              const team1Names = match.team1.map(id => playerMap.get(id)?.name || "(?)").join(" & ");
+              const team2Names = match.team2.map(id => playerMap.get(id)?.name || "(?)").join(" & ");
+              const result = match.result || "—";
+
+              const matchEl = document.createElement("div");
+              matchEl.classList.add("match-row");
+
+              const spanClasses = {team1: "", team2: ""};
+              if (match.result === "team1") {
+                spanClasses.team1 = "win";
+                spanClasses.team2 = "lose";
+              } else if (match.result === "team2") {
+                spanClasses.team1 = "lose";
+                spanClasses.team2 = "win";
+              } else if (match.result === "draw") {
+                spanClasses.team1 = "draw";
+                spanClasses.team2 = "draw";
+              }
+
+              matchEl.innerHTML = `
+                <span data-action="click->tournament#setResult"
+                      data-round-index="${roundIndex}"
+                      data-match-index="${matchIndex}"
+                      data-result="team1"
+                      class="${spanClasses.team1}">${team1Names}</span>
+
+                <span data-action="click->tournament#setResult"
+                      data-round-index="${roundIndex}"
+                      data-match-index="${matchIndex}"
+                      data-result="draw"
+                      class="vs">vs</span>
+
+                <span data-action="click->tournament#setResult"
+                      data-round-index="${roundIndex}"
+                      data-match-index="${matchIndex}"
+                      data-result="team2"
+                      class="${spanClasses.team2}">${team2Names}</span>
+              `;
+
+              roundEl.appendChild(matchEl);
+            });
+
+            if (round.pausers && round.pausers.length > 0) {
+            const pauseInfo = document.createElement("div");
+            pauseInfo.classList.add("pause-info");
+            const names = round.pausers.map(id => playerMap.get(id)?.name || "??").join(", ");
+            pauseInfo.textContent = `Pauzują: ${names}`;
+            roundEl.appendChild(pauseInfo);
+          }
+          } else {
+            roundEl.appendChild(revealBtn);
+          }
+
+          container.appendChild(roundEl);
+        });
+      }
+
+      renderRanking() {
+        const rounds = JSON.parse(localStorage.getItem("tournamentRounds") || "[]");
+        const players = this.getAllPlayers();
+        const pauseCounts = JSON.parse(localStorage.getItem("pauseCounts") || "{}");
+
+        const scores = new Map();
+        const matchesPlayed = new Map();
+
+        players.forEach(p => {
+          const pausesCount = pauseCounts[p.id] || 0;
+          const initialScore =
+            pausesCount === 2 ? 3 : pausesCount === 1 ? 2 : 0;
+          scores.set(p.id, initialScore);
+          matchesPlayed.set(p.id, pausesCount || 0);
+        });
+
+        for (const round of rounds) {
+          for (const match of round.matches) {
+            const allPlayers = [...match.team1, ...match.team2];
+            const result = match.result; // "team1" | "team2" | "draw" | undefined
+
+            if (!result) continue;
+
+            // Zlicz mecze
+            allPlayers.forEach(id => matchesPlayed.set(id, matchesPlayed.get(id) + 1));
+
+            if (result === "draw") {
+              allPlayers.forEach(id => scores.set(id, scores.get(id) + 1));
+            } else if (result === "team1") {
+              match.team1.forEach(id => scores.set(id, scores.get(id) + 2));
+            } else if (result === "team2") {
+              match.team2.forEach(id => scores.set(id, scores.get(id) + 2));
+            }
+          }
+        }
+
+        const tbody = document.querySelector("#ranking-table tbody");
+        tbody.innerHTML = "";
+
+        const rankingArray = players.map(p => ({
+          name: p.name,
+          points: scores.get(p.id),
+          matches: matchesPlayed.get(p.id),
+        }));
+
+        rankingArray.sort((a, b) => b.points - a.points || b.matches - a.matches);
+
+        rankingArray.forEach(({ name, points, matches }) => {
+          const tr = document.createElement("tr");
+          tr.innerHTML = `
+            <td>${name}</td>
+            <td>${matches}</td>
+            <td>${points}</td>
+          `;
+          tbody.appendChild(tr);
+        });
+      }
+      
+      getNames(ids) {
+        const players = this.getAllPlayers();
+        console.log(players);
+        return ids.map(id => players.find(p => p.id === id)?.name || "(?)").join(" & ")
+      }
+
+      calculatePoints() {
+        const scores = {}
+        const players = this.getAllPlayers();
+        players.forEach(p => scores[p.id] = 0)
+
+        const roundsData = localStorage.getItem("tournamentRounds") || "[]";
+        const rounds = JSON.parse(roundsData);
+        rounds.forEach(round => {
+          round.matches.forEach(match => {
+            const { team1, team2 } = match
+            const result = match.result;
+            if (!result) return
+            if (result === "draw") {
+              [...team1, ...team2].forEach(id => scores[id] += 1)
+            } else if (result === "team1") {
+              team1.forEach(id => scores[id] += 2)
+            } else if (result === "team2") {
+              team2.forEach(id => scores[id] += 2)
+            }
+          })
+        })
+
+        return scores
+      }
+
+      statusValueChanged(status) {
+        if (status === "running") {
+          this.disableEditing();
+        } else if (status === "draft") {
+          this.enableEditing();
+        }
+
+        this.updateStatusLabel();
+      }
+
+      currentStepValueChanged(step) {
+        if (this.currentStepValue === 0) return;
+
+        localStorage.setItem("currentStep", step);
+        this.showStep(step);
+      }
+
+      showStep(step) {
+        this.step1Target.classList.toggle("hidden", step !== 1)
+        this.step2Target.classList.toggle("hidden", step !== 2)
+        this.stepIndicator1Target.classList.toggle("active", step === 1)
+        this.stepIndicator2Target.classList.toggle("active", step === 2)
+      }
+
+      generateId() {
+        return crypto.randomUUID?.() || String(Date.now()) + Math.random().toString(16).slice(2)
+      }
+
+      addPlayers(event) {
+        event.preventDefault()
+        const bucket = event.target.dataset.bucket
+        const textarea = bucket === "A" ? this.bucketAInputTarget : this.bucketBInputTarget
+        const storageKey = `playersBucket${bucket}`
+        const players = JSON.parse(localStorage.getItem(storageKey) || "[]")
+
+        const namesWithIds = textarea.value
+          .split("\n")
+          .map(name => name.trim())
+          .filter(name => name.length > 0)
+          .map(name => ({
+            id: this.generateId(),
+            bucket,
+            name
+          }))
+
+        const availableSlots = 64 - players.length
+        const namesWithIdsToAdd = namesWithIds.slice(0, availableSlots)
+
+        players.push(...namesWithIdsToAdd)
+        localStorage.setItem(storageKey, JSON.stringify(players))
+        this.renderPlayers()
+
+        textarea.value = "" // wyczyść textarea po dodaniu
+      }
+
+      getPlayers(bucket) {
+        const key = `playersBucket${bucket}`;
+        try {
+          const raw = localStorage.getItem(key);
+          const players = JSON.parse(raw);
+          return Array.isArray(players) ? players : [];
+        } catch (e) {
+          return [];
+        }
+      }
+
+      getAllPlayers() {
+        return [...this.getPlayers("A"), ...this.getPlayers("B")];
+      }
+
+      removePlayer(bucket, index) {
+        const storageKey = `playersBucket${bucket}`
+        const players = JSON.parse(localStorage.getItem(storageKey) || "[]")
+        players.splice(index, 1)
+        localStorage.setItem(storageKey, JSON.stringify(players))
+        this.renderPlayers()
+      }
+
+      loadPlayers() {
+        this.renderPlayers()
+      }
+
+      renderPlayers() {
+        const renderList = (bucket, listTarget) => {
+          const players = JSON.parse(localStorage.getItem(`playersBucket${bucket}`) || "[]")
+          listTarget.innerHTML = ""
+          players.forEach((player, index) => {
+            const li = document.createElement("li")
+            li.className = "player-item"
+            li.textContent = player.name
+            const btn = document.createElement("button")
+            btn.textContent = "🗑️"
+            btn.className = "delete"
+            btn.onclick = () => this.removePlayer(bucket, index)
+            btn.style.marginLeft = "1em"
+            li.appendChild(btn)
+            listTarget.appendChild(li)
+          })
+        }
+
+        renderList("A", this.bucketAListTarget)
+        renderList("B", this.bucketBListTarget)
+      }
+
+      start() {
+        localStorage.setItem("pauseCounts", "{}");
+
+        let allPlayers = this.getAllPlayers();
+        if (allPlayers.length < 9) {
+          alert("Potrzeba minimum 9 graczy, żeby rozpocząć turniej.");
+          return;
+        }
+
+        const withJoker = (allPlayers.length + 1) % 4 === 0;
+        if (withJoker) {
+          const joker = {
+            id: 'joker',
+            name: 'TotalDYP',
+            bucket: 'B',
+            isJoker: true,
+          };
+
+          const playersB = this.getPlayers("B")
+          playersB.push(joker);
+          localStorage.setItem("playersBucketB", JSON.stringify(playersB));
+
+          this.loadPlayers()
+        }
+
+        allPlayers = this.getAllPlayers();
+        let rounds = generateTournamentRounds(allPlayers);
+        while (!this.areRoundsValid(rounds)) {
+          console.log("powtórka");
+          rounds = generateTournamentRounds(allPlayers);
+        }
+
+        const playerMap = new Map(allPlayers.map(p => [p.id, p]));
+
+        this.renderRounds(rounds, playerMap);
+        this.renderRanking();
+        this.setTournamentState("running");
+        this.currentStepValue = 2;
+      }
+
+      areRoundsValid(rounds) {
+        let result = true;
+        rounds.forEach((round) => {
+          result = result && round.matches.length === rounds[0].matches.length;
+          if (!result) return false;
+        } )
+
+        return result;
+      }
+
+      break() {
+        localStorage.setItem("pauseCounts", "{}");
+        localStorage.setItem("tournamentRounds", "[]");
+        this.roundsTarget.innerHTML = "";
+        this.setTournamentState("draft");
+      }
+
+      nextStep() {
+        this.currentStepValue += 1;
+        this.showStep(this.currentStepValue);
+      }
+
+      prevStep() {
+        this.currentStepValue -= 1;
+        this.showStep(this.currentStepValue)
+      }
+    })
+  </script>
+</head>
+<body data-controller="tournament">
+  <header>
+    <h1>Rumble Dyp</h1>
+    <div>
+      <span data-tournament-target="statusLabel" class="text-sm px-2 py-1 rounded bg-gray-100 text-gray-700">
+        Ładowanie stanu...
+      </span>
+    </div>
+  </header>
+
+  <div class="stepper">
+    <div class="step" data-tournament-target="stepIndicator1">1. Edycja</div>
+    <div class="step" data-tournament-target="stepIndicator2">2. Turniej</div>
+  </div>
+
+  <div data-tournament-target="step1">
+    <div>
+      <h2>Faza Edycji</h2>
+      <button data-tournament-target="nextStepButton" data-action="tournament#nextStep">Dalej</button>
+    </div>
+
+    <div class="buckets">
+      <div class="bucket">
+        <h2>Koszyk A</h2>
+        <form data-bucket="A" data-action="submit->tournament#addPlayers">
+          <div>
+            <textarea rows="5" data-tournament-target="bucketAInput" placeholder="Każdy zawodnik w osobnym wierszu"></textarea>
+          </div>
+          <button class="add-player-btn" type="submit">Dodaj do koszyka A</button>
+        </form>
+        <ul class="player-list" data-tournament-target="bucketAList"></ul>
+      </div>
+
+      <div class="bucket">
+        <h2>Koszyk B</h2>
+        <form data-bucket="B" data-action="submit->tournament#addPlayers">
+          <div>
+            <textarea rows="5" data-tournament-target="bucketBInput" placeholder="Każdy zawodnik w osobnym wierszu"></textarea>
+          </div>
+          <button class="add-player-btn" type="submit">Dodaj do koszyka B</button>
+        </form>
+        <ul class="player-list" data-tournament-target="bucketBList"></ul>
+      </div>
+    </div>
+
+    <div>
+      <button data-tournament-target="startButton" data-action="click->tournament#start">Rozpocznij turniej</button>
+      <button data-tournament-target="breakButton" data-action="click->tournament#break">Anuluj turniej</button>
+    </div>
+  </div>
+
+  <div id="step2" data-tournament-target="step2" class="hidden">
+    <h2>Faza turnieju</h2>
+    <button data-action="tournament#prevStep">Wstecz</button>
+
+    <div id="tournament-view">
+      <div id="ranking">
+        <table id="ranking-table">
+          <thead>
+            <tr>
+              <th>Gracz</th>
+              <th>Mecze</th>
+              <th>Punkty</th>
+            </tr>
+          </thead>
+          <tbody data-tournament-target="ranking">
+            <!-- Rzędy wypełniane dynamicznie -->
+          </tbody>
+        </table>
+      </div>
+      
+      <div data-tournament-target="rounds"></div>
+    </div>
+  </div>
+</body>
+</html>

@@ -516,9 +516,10 @@
 
         rankingArray.sort((a, b) => b.points - a.points || b.matches - a.matches);
 
-        rankingArray.forEach(({ name, points, matches }) => {
+        rankingArray.forEach(({ name, points, matches }, index) => {
           const tr = document.createElement("tr");
           tr.innerHTML = `
+            <td>${index + 1}</td>
             <td>${name}</td>
             <td>${matches}</td>
             <td>${points}</td>
@@ -807,6 +808,7 @@
         <table id="ranking-table">
           <thead>
             <tr>
+              <th>#</th>
               <th>Gracz</th>
               <th>Mecze</th>
               <th>Punkty</th>

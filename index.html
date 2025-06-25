@@ -228,7 +228,7 @@
     window.Stimulus = Application.start()
 
     Stimulus.register("tournament", class extends Controller {
-      static targets = ["step1", "step2", "stepIndicator1", "stepIndicator2", "bucketAList", "bucketBList", "bucketAInput", "bucketBInput", "statusLabel", "startButton", "breakButton", "nextStepButton", "rounds", "results", "ranking"]
+      static targets = ["step1", "step2", "stepIndicator1", "stepIndicator2", "bucketAList", "bucketBList", "bucketAInput", "bucketBInput", "statusLabel", "startButton", "breakButton", "nextStepButton", "resetPlayersButton", "rounds", "results", "ranking"]
       static values = { currentStep: Number, status: String }
 
       connect() {
@@ -322,6 +322,11 @@
         startButton.style.opacity = "0.5";
         startButton.style.cursor = "not-allowed";
 
+        const resetPlayersButton = this.resetPlayersButtonTarget;
+        resetPlayersButton.disabled = true;
+        resetPlayersButton.style.opacity = "0.5";
+        resetPlayersButton.style.cursor = "not-allowed";
+
         const breakButton = this.breakButtonTarget;
         breakButton.disabled = false;
         breakButton.style.opacity = "1";
@@ -357,6 +362,11 @@
         startButton.disabled = false;
         startButton.style.opacity = "1";
         startButton.style.cursor = "pointer";
+
+        const resetPlayersButton = this.resetPlayersButtonTarget;
+        resetPlayersButton.disabled = false;
+        resetPlayersButton.style.opacity = "1";
+        resetPlayersButton.style.cursor = "pointer";
 
         const breakButton = this.breakButtonTarget;
         breakButton.disabled = true;
@@ -626,6 +636,15 @@
         this.renderPlayers()
       }
 
+      resetPlayers() {
+        if (this.statusValue !== "draft") return;
+
+        localStorage.removeItem("playersBucketA");
+        localStorage.removeItem("playersBucketB");
+
+        this.loadPlayers();
+      }
+
       loadPlayers() {
         this.renderPlayers()
       }
@@ -665,7 +684,7 @@
         if (withJoker) {
           const joker = {
             id: 'joker',
-            name: 'TotalDYP',
+            name: 'TotalDYP 🎲',
             bucket: 'B',
             isJoker: true,
           };
@@ -705,6 +724,12 @@
       break() {
         localStorage.setItem("pauseCounts", "{}");
         localStorage.setItem("tournamentRounds", "[]");
+
+        const playersB = this.getPlayers("B")
+        const filteredPlayersB = playersB.filter(p => p.id !== "joker");
+        localStorage.setItem("playersBucketB", JSON.stringify(filteredPlayersB));
+        this.loadPlayers()
+        
         this.roundsTarget.innerHTML = "";
         this.setTournamentState("draft");
       }
@@ -769,6 +794,7 @@
     <div>
       <button data-tournament-target="startButton" data-action="click->tournament#start">Rozpocznij turniej</button>
       <button data-tournament-target="breakButton" data-action="click->tournament#break">Anuluj turniej</button>
+      <button data-tournament-target="resetPlayersButton" data-action="click->tournament#resetPlayers" class="btn danger">Resetuj wszystkich graczy</button>
     </div>
   </div>
 

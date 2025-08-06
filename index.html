@@ -263,7 +263,11 @@
 
         const rounds = JSON.parse(localStorage.getItem("tournamentRounds") || "[]");
 
-        rounds[roundIndex].matches[matchIndex].result = result;
+        if (rounds[roundIndex].matches[matchIndex].result === result) {
+          delete rounds[roundIndex].matches[matchIndex]["result"]
+        } else {
+          rounds[roundIndex].matches[matchIndex].result = result;
+        }
 
         localStorage.setItem("tournamentRounds", JSON.stringify(rounds));
 

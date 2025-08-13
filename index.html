@@ -394,7 +394,10 @@
           revealBtn.textContent = round.revealed ? "Ukryj" : "Odkryj";
           revealBtn.classList.add("reveal-button");
 
-          revealBtn.addEventListener("click", () => {
+          revealBtn.addEventListener("click", (event) => {
+            event.stopPropagation();
+            event.preventDefault();
+
             const pauseCounts = JSON.parse(localStorage.getItem("pauseCounts") || "{}");
 
             round.revealed = true;

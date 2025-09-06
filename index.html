@@ -683,12 +683,12 @@
         localStorage.setItem("pauseCounts", "{}");
 
         let allPlayers = this.getAllPlayers();
-        if (allPlayers.length < 9) {
-          alert("Potrzeba minimum 9 graczy, żeby rozpocząć turniej.");
+        if (allPlayers.length < 8) {
+          alert("Potrzeba minimum 8 graczy, żeby rozpocząć turniej.");
           return;
         }
 
-        const withJoker = (allPlayers.length + 1) % 4 === 0;
+        const withJoker = allPlayers.length === 8 || ((allPlayers.length + 1) % 4 === 0);
         if (withJoker) {
           const joker = {
             id: 'joker',
